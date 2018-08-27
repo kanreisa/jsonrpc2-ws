@@ -1,4 +1,3 @@
-!/yarn.lock
 /node_modules
 /lib
 /.vscode
@@ -6,3 +5,4 @@
 *.swp
 *.lock
 .idea
+!/yarn.lock
