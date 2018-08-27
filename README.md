@@ -7,7 +7,7 @@ Yet Another Server Library which Implementation of JSON-RPC 2.0 over WebSocket f
 
 ## Installation
 
-```
+```sh
 npm install jsonrpc2-ws --save
 # or
 yarn add jsonrpc2-ws
