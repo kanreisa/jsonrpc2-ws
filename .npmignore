@@ -1,0 +1,10 @@
+/.vscode
+/node_modules
+/src
+/test
+.editorconfig
+.gitignore
+tsconfig.json
+tslint.json
+*.log
+*.swp

@@ -1,0 +1,8 @@
+!/yarn.lock
+/node_modules
+/lib
+/.vscode
+*.log
+*.swp
+*.lock
+.idea
