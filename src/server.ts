@@ -76,6 +76,10 @@ export default class Server extends EventEmitter {
      */
     open(callback?: () => void): this {
 
+        if (this.wss) {
+            throw new Error("`ws` has already been created");
+        }
+
         this.wss = new WebSocketServer(this.options.wss, callback);
 
         this.wss.once("listening", () => this.emit("listening"));
