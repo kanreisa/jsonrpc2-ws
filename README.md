@@ -1,6 +1,6 @@
 # jsonrpc2-ws
 
-Yet Another Server Library which Implementation of JSON-RPC 2.0 over WebSocket for Node.js (w/ TypeScript)
+Yet Another Server Library which Implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) over WebSocket for Node.js (w/ TypeScript)
 
 [![npm][npm-img]][npm-url]
 [![build][travis-img]][travis-url]
@@ -38,7 +38,7 @@ rpc.on("connection", (socket, req) => {
 
     // room
     socket.joinTo("general");
-    rpc.notifyTo("general", "general.count", { count: rpc.in("chatroom").size });
+    rpc.notifyTo("general", "general.count", { count: rpc.in("general").size });
 });
 
 rpc.methods.set("nick", (socket, params) => {
