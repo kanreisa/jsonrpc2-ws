@@ -86,7 +86,7 @@ export default class Server extends EventEmitter {
 
         this.wss.on("connection", (ws, req) => {
 
-            const socket = new Socket(this, ws, req);
+            let socket = new Socket(this, ws, req);
 
             this.sockets.set(socket.id, socket);
 
@@ -94,7 +94,10 @@ export default class Server extends EventEmitter {
                 this.sockets.delete(socket.id);
                 socket.emit("close");
                 socket.removeAllListeners();
+                socket.ws = null;
+                socket = null;
                 ws.removeAllListeners();
+                ws = null;
             });
 
             ws.on("message", data => this._wsMessageHandler(socket, data));
