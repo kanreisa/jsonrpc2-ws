@@ -30,6 +30,10 @@ export interface Options {
      *  details: https://github.com/websockets/ws/blob/master/doc/ws.md
      */
     wss: WSServerOptions;
+    /**
+     * use `uws` (experimental)
+     */
+    uws?: boolean;
 }
 
 export default interface Server {
@@ -62,7 +66,8 @@ export default class Server extends EventEmitter {
 
         this.options = Object.assign({
             open: true,
-            jsonrpcVersionCheck: VERSION_CHECK_MODE.STRICT
+            jsonrpcVersionCheck: VERSION_CHECK_MODE.STRICT,
+            uws: false
         }, options);
 
         if (this.options.open) {
@@ -80,7 +85,11 @@ export default class Server extends EventEmitter {
             throw new Error("`ws` has already been created");
         }
 
-        this.wss = new WebSocketServer(this.options.wss, callback);
+        if (this.options.uws) {
+            this.wss = new (require("uws").Server)(this.options.wss, callback);
+        } else {
+            this.wss = new WebSocketServer(this.options.wss, callback);
+        }
 
         this.wss.once("listening", () => this.emit("listening"));
 
@@ -192,7 +201,7 @@ export default class Server extends EventEmitter {
         return sockets;
     }
 
-    private async _wsMessageHandler(socket: Socket, data: WebSocket.Data): Promise<void> {
+    private async _wsMessageHandler(socket: Socket, data: any): Promise<void> {
 
         const calls: (Request | Notification)[] = [];
         const responses: Response[] = [];
