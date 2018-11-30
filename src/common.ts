@@ -1,3 +1,5 @@
+import { callbackify } from "util";
+
 /**
  * JSON-RPC 2.0 Call Basic
  */
@@ -41,6 +43,42 @@ export interface Request extends Call {
 }
 
 /**
+ * JSON-RPC 2.0 Error Response
+ */
+export interface ErrorResponse extends Call {
+    /**
+     * This member is REQUIRED on error.
+     * This member MUST NOT exist if there was no error triggered during invocation.
+     * The value for this member MUST be an Object as defined in section 5.1.
+     */
+    error: Error;
+    /**
+     * This member is REQUIRED.
+     * It MUST be the same as the value of the id member in the Request Object.
+     * If there was an error in detecting the id in the Request object (e.g. Parse error/Invalid Request), it MUST be Null.
+     */
+    id: string | number | null;
+}
+
+/**
+ * JSON-RPC 2.0 Success Response
+ */
+export interface SuccessResponse extends Call {
+    /**
+     * This member is REQUIRED on success.
+     * This member MUST NOT exist if there was an error invoking the method.
+     * The value of this member is determined by the method invoked on the Server.
+     */
+    result: any;
+    /**
+     * This member is REQUIRED on error.
+     * This member MUST NOT exist if there was no error triggered during invocation.
+     * The value for this member MUST be an Object as defined in section 5.1.
+     */
+    id: string | number | null;
+}
+
+/**
  * JSON-RPC 2.0 Response
  */
 export interface Response extends Call {
@@ -65,6 +103,23 @@ export interface Response extends Call {
 }
 
 /**
+ * Check type of call is an Reponse or not
+ * @param call an Call object which will be checked.
+ */
+export function isResponse(call: Request | Notification | Response): call is Response {
+    return "id" in call && ("result" in call || "error" in call);
+}
+
+/**
+ * Check type of response is SuccessResponse or not
+ *
+ * @param response an Response object which will be checked.
+ */
+export function isSuccessResponse(response: Response): response is SuccessResponse {
+    return "result" in response && response.id !== null;
+}
+
+/**
  * JSON-RPC 2.0 Error Object
  */
 export interface Error {
@@ -84,6 +139,15 @@ export interface Error {
      * The value of this member is defined by the Server (e.g. detailed error information, nested errors etc.).
      */
     data?: any;
+}
+
+export const enum ErrorCode {
+    ParseError = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidPrams = -32602,
+    InternalError = -32603,
+    ServerError = -32000
 }
 
 /**

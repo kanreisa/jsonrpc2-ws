@@ -3,28 +3,17 @@ import EventEmitter = require("eventemitter3");
 import WebSocket = require("ws");
 import { Server as WebSocketServer, ServerOptions as WSServerOptions, OPEN as WS_OPEN } from "ws";
 import uuidv4 = require("uuid/v4");
-import { Notification, Request, Response, createError } from "./common";
+import { Notification, Error as RPCError, Response, ErrorResponse } from "./common";
+import { Socket as ISocket } from "./Socket";
+import MessageHandler, { VERSION_CHECK_MODE, Options as MessageHandlerOptions } from "./MessageHandler";
 
 type SocketId = string;
-type MethodFunction = (socket: Socket, params: any) => Promise<any> | any;
 
-export enum VERSION_CHECK_MODE {
-    STRICT,
-    LOOSE,
-    IGNORE
-}
-
-export interface Options {
+export interface Options extends MessageHandlerOptions {
     /**
      * call `#open()`
      */
     open?: boolean;
-    /**
-     * `STRICT`: only accepts jsonrpc: `2.0`.
-     * `LOOSE`: accepts jsonrpc: `2.0` but it's omittable.
-     * `IGNORE`: ignore jsonrpc property.
-     */
-    jsonrpcVersionCheck?: VERSION_CHECK_MODE;
     /**
      * `ws` constructor's options.
      *  details: https://github.com/websockets/ws/blob/master/doc/ws.md
@@ -40,10 +29,8 @@ export default interface Server {
     on(event: "listening", cb: (this: Server) => void): this;
     on(event: "connection", cb: (this: Server, socket: Socket, req?: http.IncomingMessage) => void): this;
     on(event: "error", cb: (this: Server, error: Error) => void): this;
-}
-
-export interface Socket {
-    on(event: "close", cb: (this: Socket) => void): this;
+    on(event: "error_response", cb: (this: Server, response: ErrorResponse) => void): this;
+    on(event: "notification_error", cb: (this: Server, error: RPCError) => void): this;
 }
 
 /**
@@ -54,7 +41,9 @@ export default class Server extends EventEmitter {
     options: Options;
     wss: WebSocketServer;
     sockets: Map<SocketId, Socket> = new Map();
-    methods: Map<string, MethodFunction> = new Map();
+    get methods() { return this._messageHandler.methods; }
+
+    private _messageHandler: MessageHandler<Socket>;
 
     /**
      * Create a instance.
@@ -69,6 +58,16 @@ export default class Server extends EventEmitter {
             jsonrpcVersionCheck: VERSION_CHECK_MODE.STRICT,
             uws: false
         }, options);
+
+        this._messageHandler = new MessageHandler(this.options);
+        this._messageHandler.on("error_response", (socket, response) => {
+            this.emit("error_response", socket, response);
+            socket.emit("error_response", response);
+        });
+        this._messageHandler.on("notification_error", (socket, error) => {
+            this.emit("notification_error", socket, error);
+            socket.emit("notification_error", error);
+        });
 
         if (this.options.open) {
             this.open(callback);
@@ -109,7 +108,7 @@ export default class Server extends EventEmitter {
                 ws = null;
             });
 
-            ws.on("message", data => this._wsMessageHandler(socket, data));
+            ws.on("message", data => this._messageHandler.handleMessage(socket, data));
 
             this.emit("connection", socket, req);
         });
@@ -201,128 +200,18 @@ export default class Server extends EventEmitter {
         return sockets;
     }
 
-    private async _wsMessageHandler(socket: Socket, data: any): Promise<void> {
-
-        const calls: (Request | Notification)[] = [];
-        const responses: Response[] = [];
-
-        let isBinary = false;
-        let isArray = false;
-
-        if (data instanceof ArrayBuffer) {
-            isBinary = true;
-
-            data = Buffer.from(data).toString();
-        }
-
-        try {
-            const obj = JSON.parse(<string> data);
-            if (Array.isArray(obj)) {
-                isArray = true;
-
-                if (obj.length === 0) {
-                    const res: Response = {
-                        jsonrpc: "2.0",
-                        error: createError(-32600, null, "Empty Array"),
-                        id: null
-                    };
-                    socket.send(JSON.stringify(res), isBinary);
-                    return;
-                }
-
-                calls.push(...obj);
-            } else {
-                calls.push(obj);
-            }
-        } catch (e) {
-            const res: Response = {
-                jsonrpc: "2.0",
-                error: createError(-32700, null, "Invalid JSON"),
-                id: null
-            };
-            socket.send(JSON.stringify(res), isBinary);
-            return;
-        }
-
-        for (const call of calls) {
-            const res = await this._processCall(socket, call);
-            if (res) {
-                responses.push(res);
-            }
-        }
-
-        if (responses.length === 0) {
-            return;
-        }
-
-        socket.send(JSON.stringify(isArray ? responses : responses[0]), isBinary);
-    }
-
-    private async _processCall(socket: Socket, call: Request | Notification): Promise<Response | void> {
-
-        const reqId = (<Request> call).id;
-
-        const res: Response = {
-            jsonrpc: "2.0",
-            id: reqId === undefined ? null : reqId
-        };
-
-        if (typeof call !== "object") {
-            res.error = createError(-32600);
-            return res;
-        }
-
-        if (
-            call.jsonrpc !== "2.0" && (
-                this.options.jsonrpcVersionCheck === VERSION_CHECK_MODE.STRICT ||
-                (this.options.jsonrpcVersionCheck === VERSION_CHECK_MODE.LOOSE && call.jsonrpc !== undefined)
-            )
-        ) {
-            res.error = createError(-32600, null, "Invalid JSON-RPC Version");
-            return res;
-        }
-
-        if (!call.method) {
-            res.error = createError(-32602, null, "Method not specified");
-            return res;
-        }
-
-        if (typeof call.method !== "string") {
-            res.error = createError(-32600, null, "Invalid type of method name");
-            return res;
-        }
-
-        if (typeof call.params !== "object" || call.params === null) {
-            res.error = createError(-32600);
-            return res;
-        }
-
-        if (this.methods.has(call.method) === false) {
-            res.error = createError(-32601);
-            return res;
-        }
-
-        try {
-            res.result = await this.methods.get(call.method)(socket, call.params) || null;
-            if (reqId === undefined) {
-                return;
-            }
-            return res;
-        } catch (e) {
-            if (reqId === undefined) {
-                return;
-            }
-            if (e instanceof Error) {
-                res.error = createError(-32000, e.name, e.message);
-            } else {
-                res.error = e;
-            }
-            return res;
-        }
-    }
 }
 
-export class Socket extends EventEmitter {
+/**
+ * Socket of JSON-RPC 2.0 WebSocket Server
+ */
+export interface Socket extends ISocket {
+    on(event: "close", cb: (this: Socket) => void): this;
+    on(event: "notification_error", cb: (this: Socket, error: RPCError) => void): void;
+    on(event: "error_response", cb: (this: Socket, response: ErrorResponse) => void): void;
+}
+
+export class Socket extends EventEmitter implements ISocket {
 
     readonly id: string = uuidv4();
     readonly rooms: Set<string> = new Set();
