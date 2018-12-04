@@ -53,6 +53,7 @@ export default interface Client {
     on(event: "error_response", listener: (this: Client, response: ErrorResponse) => void);
     on(event: "notification_error", listener: (this: Client, error: RPCError) => void);
     on(event: "close", cb: (this: Client) => void): this;
+    on(event: "error", listener: (this: Client, error: any) => void);
 }
 
 /**
@@ -111,15 +112,15 @@ export default class Client extends EventEmitter implements Socket {
 
         this.emit("connecting");
         const ws = this._ws = new WebSocket(this.uri, this.config.protocols, this.config);
+        ws.on("error", error => this.emit("error", error));
 
         ws.on("close", () => this.emit("close"));
         ws.on("close", (code, reason) => this.emit("disconnect", code, reason));
+        ws.on("close", () => this._ws = null);
 
         if (this.config.reconnection) {
             this._skipReconnection = false;
             ws.on("close", () => this.reconnect());
-        } else {
-            ws.on("close", () => this._ws = null);
         }
 
         ws.on("message", data => this._messageHandler.handleMessage(this, data));
@@ -241,9 +242,9 @@ export default class Client extends EventEmitter implements Socket {
 
         try {
             await new Promise((resolve, reject) => {
-                this._ws.once("error", reject);
+                this._ws.once("close", (code, reason) => reject({code, reason}));
                 this._ws.once("open", () => {
-                    this._ws.off("error", reject);
+                    this._ws.off("close", reject);
                     resolve();
                 });
             });
