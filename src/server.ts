@@ -205,7 +205,7 @@ export default class Server extends EventEmitter {
      */
     isOpen() {
         return this.wss !== undefined;
-}
+    }
 }
 
 /**
