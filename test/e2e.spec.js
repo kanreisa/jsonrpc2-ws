@@ -22,6 +22,16 @@ describe("Server-Client", function () {
         await new Promise(resolve => client.once("connected", resolve));
     });
 
+    this.beforeEach(async () => {
+        if (!server.isOpen()) {
+            throw new Error("Server is closed");
+        }
+        if (!client.isConnected()) {
+            server.once("connection", socket => serverSocket = socket);
+            await client.connect();
+        }
+    });
+
     describe("server-side", () => {
         describe("procedure call", function () {
             it("can be called", async function () {

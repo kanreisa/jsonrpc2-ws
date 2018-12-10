@@ -215,6 +215,7 @@ export default class Client extends EventEmitter implements Socket {
         });
     }
 
+    }
     private async reconnect() {
         if (this._reconnecting || this._skipReconnection) {
             return;
