@@ -125,7 +125,13 @@ export default class Client extends EventEmitter implements Socket {
 
         ws.on("message", data => this._messageHandler.handleMessage(this, data));
 
-        await new Promise(resolve => ws.once("open", resolve));
+        await new Promise((resolve, reject) => {
+            ws.once("open", () => {
+                ws.off("error", reject);
+                resolve();
+            });
+            ws.once("error", reject);
+        });
 
         this.emit("connected");
     }
