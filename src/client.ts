@@ -18,6 +18,7 @@ export interface Config extends MessageHandlerOptions, WebSocket.ClientOptions {
     reconnectionJitter: number;
     methodCallTimeout: number;
     autoConnect: boolean;
+    bufferSendingMessages: boolean;
     query: object;
     protocols: string | string[];
 }
@@ -35,6 +36,7 @@ export const ConfigDefaults: Config = Object.freeze({
     reconnectionJitter: 0.5,
     methodCallTimeout: 20000,
     autoConnect: true,
+    bufferSendingMessages: true,
     query: {},
     protocols: ""
 });
@@ -54,6 +56,7 @@ export default interface Client {
     on(event: "notification_error", listener: (this: Client, error: RPCError) => void);
     on(event: "close", cb: (this: Client) => void): this;
     on(event: "error", listener: (this: Client, error: any) => void);
+    on(event: "buffer_sending_error", listener: (this: Client, error: any) => void);
 }
 
 /**
@@ -61,6 +64,7 @@ export default interface Client {
  */
 export default class Client extends EventEmitter implements Socket {
     readonly config: Config;
+    readonly sendingMessageBuffer: Data[] = [];
 
     get methods() { return this._messageHandler.methods; }
 
@@ -133,6 +137,7 @@ export default class Client extends EventEmitter implements Socket {
             ws.once("error", reject);
         });
 
+        await this._sendBufferedMessages();
         this.emit("connected");
     }
 
@@ -176,15 +181,20 @@ export default class Client extends EventEmitter implements Socket {
     }
 
     send(data: Data, binary: boolean = false): void {
-        if (this._ws.readyState !== WebSocket.OPEN)  {
-            return;
-        }
-
         if (binary && isString(data)) {
             data = Buffer.from(data).buffer as any as ArrayBuffer;
         }
 
-        this._ws.send(data);
+        if (!this.isConnected())  {
+            this._bufferSendingMessage(data);
+            return;
+        }
+
+        this._ws.send(data, e => e ? this._bufferSendingMessage(data) : null);
+    }
+
+    clearSendingMessageBuffer() {
+        this.sendingMessageBuffer.length = 0;
     }
 
     notify(method: string, params?: object) {
@@ -215,7 +225,10 @@ export default class Client extends EventEmitter implements Socket {
         });
     }
 
+    isConnected() {
+        return this._ws !== null && this._ws.readyState === WebSocket.OPEN;
     }
+
     private async reconnect() {
         if (this._reconnecting || this._skipReconnection) {
             return;
@@ -292,6 +305,28 @@ export default class Client extends EventEmitter implements Socket {
             resolve(response.result);
         } else {
             reject(response.error);
+        }
+    }
+
+    private _bufferSendingMessage(data: WebSocket.Data) {
+        if (this.config.bufferSendingMessages) {
+            this.sendingMessageBuffer.push(data);
+        } else {
+            throw new Error("Message is rejected:  The socket is close without message buffering.");
+        }
+    }
+
+    private async _sendBufferedMessages() {
+        const buffer = this.sendingMessageBuffer;
+        const ws = this._ws;
+        for (let data = buffer.shift(); data; data = buffer.shift()) {
+            try {
+                await new Promise((resolve, reject) => ws.send(data, e => e ? reject(e) : resolve()));
+            } catch (e) {
+                buffer.unshift(data);
+                this.emit("buffer_sending_error", e);
+                break;
+            }
         }
     }
 }
