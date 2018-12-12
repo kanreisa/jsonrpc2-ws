@@ -258,17 +258,8 @@ export default class Client extends EventEmitter implements Socket {
             return;
         }
 
-        this.connect();
-
         try {
-            await new Promise((resolve, reject) => {
-                this._ws.once("close", (code, reason) => reject({code, reason}));
-                this._ws.once("open", () => {
-                    this._ws.off("close", reject);
-                    resolve();
-                });
-            });
-
+            await this.connect();
         } catch (err) {
             this._reconnecting = false;
             this.reconnect();
