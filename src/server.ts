@@ -200,6 +200,12 @@ export default class Server extends EventEmitter {
         return sockets;
     }
 
+    /**
+     * Server is open or not
+     */
+    isOpen() {
+        return this.wss !== undefined;
+    }
 }
 
 /**
@@ -243,7 +249,7 @@ export class Socket extends EventEmitter implements ISocket {
      * @param params The parameters of the method.
      */
     send(data: any, binary: boolean = false): void {
-        if (this.ws.readyState === WS_OPEN) {
+        if (this.isOpen()) {
             this.ws.send(data, { binary });
         }
     }
@@ -293,5 +299,12 @@ export class Socket extends EventEmitter implements ISocket {
      */
     terminate(): void {
         this.ws.terminate();
+    }
+
+    /**
+     * Get the connection is open or not
+     */
+    isOpen() {
+        return this.ws !== undefined && this.ws.readyState === WS_OPEN;
     }
 }

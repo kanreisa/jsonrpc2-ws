@@ -17,9 +17,19 @@ describe("Server-Client", function () {
         server.once("connection", socket => serverSocket = socket);
 
         const port = server.wss.address().port;
-        client = new Client(`ws://localhost:${port}/`);
+        client = new Client(`ws://localhost:${port}/`, { bufferSendingMessages: false,  methodCallTimeout: 20});
 
         await new Promise(resolve => client.once("connected", resolve));
+    });
+
+    this.beforeEach(async () => {
+        if (!server.isOpen()) {
+            throw new Error("Server is closed");
+        }
+        if (!client.isConnected()) {
+            server.once("connection", socket => serverSocket = socket);
+            await client.connect();
+        }
     });
 
     describe("server-side", () => {
@@ -65,6 +75,52 @@ describe("Server-Client", function () {
                 } catch (e) {
                     chai.expect(e).has.property("code", -32601);
                 }
+            });
+
+            it("should not send message even after recconect", async () => {
+                    let called = false;
+                    server.methods.set("myMethod", () => {
+                        called = true;
+                    });
+                    client.config.reconnection = false;
+                    const closing = new Promise(resolve => client.once("disconnect", resolve));
+                    await serverSocket.close();
+                    await closing;
+
+                    try {
+                        await client.call("myMethod");
+                    } catch (e) {
+                        chai.expect(e).has.property("message").include("rejected");
+                    }
+
+                    chai.expect(called).is.false;
+            });
+
+            describe("with `sendingMessageBuffering`", function () {
+                this.beforeAll(() => {
+                    client.config.bufferSendingMessages = true;
+                });
+
+                it("should buffer and send message after connect", async () => {
+                    const methodCalled = new Promise(resolve => server.methods.set("myMethod", () => {
+                        resolve();
+                    }));
+                    client.config.reconnection = false;
+                    const closing = new Promise(resolve => client.once("disconnect", resolve));
+                    await serverSocket.close();
+                    await closing;
+
+                    const methodCall = client.call("myMethod");
+
+                    server.once("connection", socket => serverSocket = socket);
+                    await client.connect();
+                    await methodCalled;
+                    await methodCall;
+                });
+
+                this.afterAll(() => {
+                    client.config.bufferSendingMessages = false;
+                });
             });
         });
 
@@ -199,6 +255,7 @@ describe("Server-Client", function () {
         server.removeAllListeners();
         client.methods.clear();
         client.removeAllListeners();
+        client.sendingMessageBuffer.length = 0;
     });
 
     this.afterAll(function () {
