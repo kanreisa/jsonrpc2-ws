@@ -36,6 +36,8 @@
   "homepage": "https://github.com/kanreisa/jsonrpc-websocket#readme",
   "devDependencies": {
     "@types/eventemitter3": "^2.0.2",
+    "@types/uuid": "^3.4.3",
+    "@types/ws": "^6.0.0",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "rimraf": "^2.6.2",
@@ -43,17 +45,15 @@
     "typescript": "^3.0.1"
   },
   "dependencies": {
-    "@types/uuid": "^3.4.3",
-    "@types/ws": "^6.0.0",
     "backo2": "^1.0.2",
     "eventemitter3": "^3.1.0",
     "isomorphic-ws": "^4.0.1",
     "uuid": "^3.3.2",
-    "ws": "^6.0.0"
+    "ws": "~6.1.2"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.0",
     "utf-8-validate": "^5.0.1",
-    "uws": "9"
+    "uws": "~9.14.0"
   }
 }
