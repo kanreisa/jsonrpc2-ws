@@ -103,6 +103,8 @@ export default class Server extends EventEmitter {
                 socket.emit("close");
                 socket.removeAllListeners();
                 socket.ws = null;
+                socket.rooms.clear();
+                socket.data.clear();
                 socket = null;
                 ws.removeAllListeners();
                 ws = null;
