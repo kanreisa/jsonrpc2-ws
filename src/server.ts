@@ -108,7 +108,7 @@ export default class Server extends EventEmitter {
                 ws = null;
             });
 
-            ws.on("message", data => this._messageHandler.handleMessage(socket, data));
+            ws.on("message", data => this._messageHandler.handleMessage(socket, data).catch(e => this.emit("error", e)));
 
             this.emit("connection", socket, req);
         });

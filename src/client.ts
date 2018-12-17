@@ -102,7 +102,7 @@ export default class Client extends EventEmitter implements Socket {
         this._messageHandler.on("notification_error", (socket, error) => this.emit("notification_error", error));
 
         if (this.config.autoConnect) {
-            this.connect();
+            this.connect().catch(() => void 0);
         }
     }
 
@@ -127,7 +127,7 @@ export default class Client extends EventEmitter implements Socket {
             ws.on("close", () => this.reconnect());
         }
 
-        ws.on("message", data => this._messageHandler.handleMessage(this, data));
+        ws.on("message", data => this._messageHandler.handleMessage(this, data).catch(e => this.emit("error", e)));
 
         await new Promise((resolve, reject) => {
             ws.once("open", () => {
@@ -144,7 +144,7 @@ export default class Client extends EventEmitter implements Socket {
     /**
      * Disconnect the connection if it exists
      */
-    disconnect(): Promise<void> {
+    async disconnect(): Promise<void> {
         this._skipReconnection = true;
         this._reconnecting = false;
         this._backoff.reset();
