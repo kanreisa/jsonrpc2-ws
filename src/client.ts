@@ -175,9 +175,9 @@ export default class Client extends EventEmitter implements Socket {
         }
 
         this._ws = null;
-        ws.removeAllListeners();
 
-        return promise;
+        await promise;
+        ws.removeAllListeners();
     }
 
     send(data: Data, binary: boolean = false): void {
