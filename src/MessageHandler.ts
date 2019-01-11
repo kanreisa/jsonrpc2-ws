@@ -3,7 +3,7 @@ import { Notification, Request, Response, createError, isResponse, ErrorCode, Er
 import { Data } from "isomorphic-ws";
 import EventEmitter = require("eventemitter3");
 
-export enum VERSION_CHECK_MODE {
+export const enum VERSION_CHECK_MODE {
     STRICT,
     LOOSE,
     IGNORE
