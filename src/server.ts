@@ -186,6 +186,19 @@ export default class Server extends EventEmitter {
     }
 
     /**
+     * Broadcasts a (raw) message to the room.
+     * @param room The name of the room.
+     * @param data (raw) message.
+     */
+    sendTo(room: string, data: any): void {
+        for (const socket of this.sockets.values()) {
+            if (socket.rooms.has(room) === true) {
+                socket.send(data);
+            }
+        }
+    }
+
+    /**
      * Get all sockets in the room.
      * @param room The name of the room.
      */
@@ -247,8 +260,8 @@ export class Socket extends EventEmitter implements ISocket {
 
     /**
      * Sends a (raw) message to the socket.
-     * @param method The name of the method to be invoked.
-     * @param params The parameters of the method.
+     * @param data (raw) message.
+     * @param binary binary flag.
      */
     send(data: any, binary: boolean = false): void {
         if (this.isOpen()) {
