@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "alwaysStrict": true,
-    "target": "ESNext",
+    "target": "es2018",
     "removeComments": false,
     "module": "commonjs",
     "moduleResolution": "node",
