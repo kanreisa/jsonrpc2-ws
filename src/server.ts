@@ -6,6 +6,7 @@ import uuidv4 = require("uuid/v4");
 import { Notification, Error as RPCError, Response, ErrorResponse } from "./common";
 import { Socket as ISocket } from "./Socket";
 import MessageHandler, { VERSION_CHECK_MODE, Options as MessageHandlerOptions } from "./MessageHandler";
+import MapLike from "./MapLike";
 
 type SocketId = string;
 
@@ -40,7 +41,7 @@ export default class Server extends EventEmitter {
 
     options: Options;
     wss: WebSocketServer;
-    sockets: Map<SocketId, Socket> = new Map();
+    sockets: MapLike<Socket> = new MapLike();
     get methods() { return this._messageHandler.methods; }
 
     private _messageHandler: MessageHandler<Socket>;
