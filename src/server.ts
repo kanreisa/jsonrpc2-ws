@@ -8,8 +8,6 @@ import { Socket as ISocket } from "./Socket";
 import MessageHandler, { VERSION_CHECK_MODE, Options as MessageHandlerOptions } from "./MessageHandler";
 import MapLike from "./MapLike";
 
-type SocketId = string;
-
 export interface Options extends MessageHandlerOptions {
     /**
      * call `#open()`
@@ -203,9 +201,9 @@ export default class Server extends EventEmitter {
      * Get all sockets in the room.
      * @param room The name of the room.
      */
-    in(room: string): Map<SocketId, Socket> {
+    in(room: string): MapLike<Socket> {
 
-        const sockets: Map<SocketId, Socket> = new Map();
+        const sockets: MapLike<Socket> = new MapLike();
 
         for (const socket of this.sockets.values()) {
             if (socket.rooms.has(room) === true) {
@@ -239,7 +237,7 @@ export class Socket extends EventEmitter implements ISocket {
     readonly rooms: Set<string> = new Set();
 
     /** custom data store */
-    data = new Map();
+    readonly data: MapLike<any> = new MapLike();
 
     constructor(public server: Server, public ws: WebSocket, public req: http.IncomingMessage) {
         super();
