@@ -3,7 +3,7 @@ export default class MapLike<V> {
     private readonly _map: {[key: string]: V} = {};
 
     get size(): number {
-        return this.keys.length;
+        return this.keys().length;
     }
 
     clear(): void {
@@ -27,7 +27,7 @@ export default class MapLike<V> {
         return this._map[key] !== undefined;
     }
 
-    keys(key: string): string[] {
+    keys(): string[] {
         return Object.keys(this._map);
     }
 
