@@ -79,6 +79,8 @@ export default class Server extends EventEmitter {
      */
     open(callback?: () => void): this {
 
+        const self = this;
+
         if (this.wss) {
             throw new Error("`ws` has already been created");
         }
@@ -89,16 +91,18 @@ export default class Server extends EventEmitter {
             this.wss = new WebSocketServer(this.options.wss, callback);
         }
 
-        this.wss.once("listening", () => this.emit("listening"));
+        this.wss.once("listening", function _onListeningWSS() {
+            self.emit("listening");
+        });
 
-        this.wss.on("connection", (ws, req) => {
+        this.wss.on("connection", function _onConnectionWSS(ws, req) {
 
-            let socket = new Socket(this, ws, req);
+            let socket = new Socket(ws);
 
-            this.sockets.set(socket.id, socket);
+            self.sockets.set(socket.id, socket);
 
-            ws.once("close", () => {
-                this.sockets.delete(socket.id);
+            ws.once("close", function _onCloseWS() {
+                self.sockets.delete(socket.id);
                 socket.emit("close");
                 socket.removeAllListeners();
                 socket.ws = null;
@@ -109,12 +113,19 @@ export default class Server extends EventEmitter {
                 ws = null;
             });
 
-            ws.on("message", data => this._messageHandler.handleMessage(socket, data).catch(e => this.emit("error", e)));
+            ws.on("message", function _onMessageWS(data) {
+                self._messageHandler.handleMessage(socket, data)
+                    .catch(function _onErrorHandleMessage(e) {
+                        self.emit("error", e);
+                    });
+            });
 
-            this.emit("connection", socket, req);
+            self.emit("connection", socket, req);
         });
 
-        this.wss.on("error", e => this.emit("error", e));
+        this.wss.on("error", function _onErrorWSS(e) {
+            self.emit("error", e);
+        });
 
         return this;
     }
@@ -239,7 +250,7 @@ export class Socket extends EventEmitter implements ISocket {
     /** custom data store */
     readonly data: MapLike<any> = new MapLike();
 
-    constructor(public server: Server, public ws: WebSocket, public req: http.IncomingMessage) {
+    constructor(public ws: WebSocket) {
         super();
     }
 
