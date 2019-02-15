@@ -145,7 +145,7 @@ export const enum ErrorCode {
     ParseError = -32700,
     InvalidRequest = -32600,
     MethodNotFound = -32601,
-    InvalidPrams = -32602,
+    InvalidParams = -32602,
     InternalError = -32603,
     ServerError = -32000
 }
