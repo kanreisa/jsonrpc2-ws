@@ -10,6 +10,14 @@ import MapLike from "./MapLike";
 
 export interface Options extends MessageHandlerOptions {
     /**
+     * how many ms without a pong packet to consider the connection closed
+     */
+    pingTimeout?: number;
+    /**
+     * how many ms before sending a new ping packet
+     */
+    pingInterval?: number;
+    /**
      * call `#open()`
      */
     open?: boolean;
@@ -43,6 +51,8 @@ export default class Server extends EventEmitter {
     get methods() { return this._messageHandler.methods; }
 
     private _messageHandler: MessageHandler<Socket>;
+    private _pingTimer: NodeJS.Timer;
+    private _lastPingAt: number = 0;
 
     /**
      * Create a instance.
@@ -53,6 +63,8 @@ export default class Server extends EventEmitter {
         super();
 
         this.options = Object.assign({
+            pingTimeout: 5000,
+            pingInterval: 25000,
             open: true,
             jsonrpcVersionCheck: VERSION_CHECK_MODE.STRICT,
             uws: false
@@ -120,12 +132,18 @@ export default class Server extends EventEmitter {
                     });
             });
 
+            ws.on("pong", function _onPongWS() {
+                socket._lastPongAt = Date.now();
+            });
+
             self.emit("connection", socket, req);
         });
 
         this.wss.on("error", function _onErrorWSS(e) {
             self.emit("error", e);
         });
+
+        this._pingTimer = setInterval(this._ping.bind(this), this.options.pingInterval);
 
         return this;
     }
@@ -134,6 +152,8 @@ export default class Server extends EventEmitter {
      * Closes the server and terminates all sockets.
      */
     async close(): Promise<void> {
+
+        clearInterval(this._pingTimer);
 
         for (const socket of this.sockets.values()) {
             socket.terminate();
@@ -231,6 +251,25 @@ export default class Server extends EventEmitter {
     isOpen() {
         return this.wss !== undefined;
     }
+
+    /**
+     * Ping to all sockets.
+     */
+    private _ping(): void {
+
+        const deadline = this._lastPingAt + this.options.pingTimeout;
+
+        for (const socket of this.sockets.values()) {
+            if (socket._lastPongAt > deadline) {
+                socket.terminate();
+                continue;
+            }
+
+            socket.ws.ping();
+        }
+
+        this._lastPingAt = Date.now();
+    }
 }
 
 /**
@@ -249,6 +288,9 @@ export class Socket extends EventEmitter implements ISocket {
 
     /** custom data store */
     readonly data: MapLike<any> = new MapLike();
+
+    /** (internal using for heartbeat) */
+    _lastPongAt: number = 0;
 
     constructor(public ws: WebSocket) {
         super();
