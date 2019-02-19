@@ -133,7 +133,7 @@ export default class Server extends EventEmitter {
             });
 
             ws.on("pong", function _onPongWS() {
-                socket._lastPongAt = Date.now();
+                socket._pongAt = Date.now();
             });
 
             self.emit("connection", socket, req);
@@ -260,11 +260,12 @@ export default class Server extends EventEmitter {
         const deadline = this._lastPingAt + this.options.pingTimeout;
 
         for (const socket of this.sockets.values()) {
-            if (socket._lastPongAt > deadline) {
+            if (socket._pongAt === -1 || socket._pongAt > deadline) {
                 socket.terminate();
                 continue;
             }
 
+            socket._pongAt = -1;
             socket.ws.ping();
         }
 
@@ -290,7 +291,7 @@ export class Socket extends EventEmitter implements ISocket {
     readonly data: MapLike<any> = new MapLike();
 
     /** (internal using for heartbeat) */
-    _lastPongAt: number = 0;
+    _pongAt: number = 0;
 
     constructor(public ws: WebSocket) {
         super();
