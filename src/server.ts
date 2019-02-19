@@ -47,7 +47,7 @@ export default class Server extends EventEmitter {
 
     options: Options;
     wss: WebSocketServer;
-    sockets: MapLike<Socket> = new MapLike();
+    sockets: Map<string, Socket> = new Map();
     get methods() { return this._messageHandler.methods; }
 
     private _messageHandler: MessageHandler<Socket>;
@@ -232,9 +232,9 @@ export default class Server extends EventEmitter {
      * Get all sockets in the room.
      * @param room The name of the room.
      */
-    in(room: string): MapLike<Socket> {
+    in(room: string): Map<string, Socket> {
 
-        const sockets: MapLike<Socket> = new MapLike();
+        const sockets: Map<string, Socket> = new Map();
 
         for (const socket of this.sockets.values()) {
             if (socket.rooms.has(room) === true) {
