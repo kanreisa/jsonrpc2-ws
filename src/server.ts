@@ -266,7 +266,9 @@ export default class Server extends EventEmitter {
             }
 
             socket._pongAt = -1;
-            socket.ws.ping();
+            if (socket.isOpen()) {
+                socket.ws.ping();
+            }
         }
 
         this._lastPingAt = Date.now();
