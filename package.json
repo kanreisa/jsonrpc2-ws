@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kanreisa/jsonrpc-websocket.git"
+    "url": "git+https://github.com/kanreisa/jsonrpc2-ws.git"
   },
   "author": {
     "name": "Yuki KAN",
@@ -31,9 +31,9 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/kanreisa/jsonrpc-websocket/issues"
+    "url": "https://github.com/kanreisa/jsonrpc2-ws/issues"
   },
-  "homepage": "https://github.com/kanreisa/jsonrpc-websocket#readme",
+  "homepage": "https://github.com/kanreisa/jsonrpc2-ws#readme",
   "devDependencies": {
     "@types/eventemitter3": "^2.0.2",
     "@types/uuid": "^3.4.3",
