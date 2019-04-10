@@ -141,7 +141,7 @@ describe("Server-Client", function () {
                 client.notify("myMethod", param);
             });
 
-            describe("send with unkown method", () => {
+            describe("send with unknown method", () => {
                 it("should emit `notification_error` event", (done) => {
                     client.once("notification_error", error => {
                         chai.expect(error).has.property("code", -32601);
@@ -229,7 +229,7 @@ describe("Server-Client", function () {
                 serverSocket.notify("myMethod", param);
             });
 
-            describe("send with unkown method", () => {
+            describe("send with unknown method", () => {
                 it("should emit notification error event on socket", (done) => {
                     serverSocket.once("notification_error", error => {
                         chai.expect(error).has.property("code", -32601);
