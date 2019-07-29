@@ -94,6 +94,10 @@ const server = http.createServer(app);
 const rpc = new RPCServer({ wss: { server } });
 ```
 
+## Compatibility
+
+- [StreamJsonRpc](https://github.com/microsoft/vs-streamjsonrpc) (.NET)
+
 ## :heart:
 
 BTC: `1CsARqdT2PDLdWng8r2h5pzmyC6xkVnxKw`
