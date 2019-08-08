@@ -1,7 +1,7 @@
 {
   "name": "jsonrpc2-ws",
   "version": "1.0.0-beta18",
-  "description": "Yet Another Server Library which Implementation of JSON-RPC 2.0 over WebSocket for Node.js (w/ TypeScript)",
+  "description": "Simple, Fast, Robust Implementation of JSON-RPC 2.0 over WebSocket for Node.js w/ TypeScript",
   "keywords": [
     "jsonrpc",
     "websocket",

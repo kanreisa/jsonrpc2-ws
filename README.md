@@ -1,6 +1,6 @@
 # jsonrpc2-ws
 
-Yet Another Server Library which Implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) over WebSocket for Node.js (w/ TypeScript)
+Simple, Fast, Robust Implementation of [JSON-RPC 2.0](https://www.jsonrpc.org/specification) over WebSocket for Node.js w/ TypeScript
 
 [![npm][npm-img]][npm-url]
 [![build][travis-img]][travis-url]
@@ -9,8 +9,6 @@ Yet Another Server Library which Implementation of [JSON-RPC 2.0](https://www.js
 
 ```sh
 npm install jsonrpc2-ws --save
-# or
-yarn add jsonrpc2-ws
 ```
 
 ## How to use
@@ -42,6 +40,7 @@ rpc.on("connection", (socket, req) => {
 });
 
 rpc.methods.set("nick", (socket, params) => {
+    // socket#data is Map to store custom data.
     socket.data.set("nick", params.nick);
 });
 
@@ -67,7 +66,12 @@ rpc.methods.set("chat", (socket, params) => {
         message: params.message
     });
 });
+
 // note: rpc method supports async/await or Promise.
+rpc.methods.set("something-async-method", async (socket, params) => {
+    const res = await somethingAsyncMethod();
+    return res;
+});
 ```
 
 ### w/ HTTP server
