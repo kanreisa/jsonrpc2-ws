@@ -27,9 +27,9 @@ export interface Options extends MessageHandlerOptions {
      */
     wss: WSServerOptions;
     /**
-     * use `uws` (experimental)
+     * The WebSocket server implementation to use.
      */
-    uws?: boolean;
+    wsEngine?: typeof WebSocketServer;
 }
 
 export default interface Server {
@@ -97,8 +97,8 @@ export default class Server extends EventEmitter {
             throw new Error("`ws` has already been created");
         }
 
-        if (this.options.uws) {
-            this.wss = new (require("uws").Server)(this.options.wss, callback);
+        if (this.options.wsEngine) {
+            this.wss = new this.options.wsEngine(this.options.wss, callback);
         } else {
             this.wss = new WebSocketServer(this.options.wss, callback);
         }
