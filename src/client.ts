@@ -2,7 +2,6 @@ import WebSocket = require("isomorphic-ws");
 import Backoff = require("backo2");
 import EventEmitter = require("eventemitter3");
 import { Socket } from "./Socket";
-import { isString } from "util";
 import { Data } from "isomorphic-ws";
 import { Notification, Request, Response, isSuccessResponse, Error as RPCError, ErrorResponse } from "./common";
 import MessageHandler, { Options as MessageHandlerOptions } from "./MessageHandler";
@@ -181,7 +180,7 @@ export default class Client extends EventEmitter implements Socket {
     }
 
     send(data: Data, binary: boolean = false): void {
-        if (binary && isString(data)) {
+        if (binary && typeof data === "string") {
             data = Buffer.from(data).buffer as any as ArrayBuffer;
         }
 
