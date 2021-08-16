@@ -44,18 +44,18 @@ export const ConfigDefaults: Config = Object.freeze({
 type BackoffEx = Backoff & {attempts: number};
 
 export default interface Client {
-    on(event: "connecting", listener: (this: Client) => void);
-    on(event: "connected", listener: (this: Client) => void);
-    on(event: "disconnect", listener: (this: Client, code: number, reason: any) => void);
-    on(event: "reconnecting", listener: (this: Client, attemps: number) => void);
-    on(event: "reconnect_failed", listener: (this: Client) => void);
-    on(event: "reconnect_error", listener: (this: Client, err: any) => void);
-    on(event: "reconnected", listener: (this: Client, attemps: number) => void);
-    on(event: "error_response", listener: (this: Client, response: ErrorResponse) => void);
-    on(event: "notification_error", listener: (this: Client, error: RPCError) => void);
+    on(event: "connecting", listener: (this: Client) => void): this;
+    on(event: "connected", listener: (this: Client) => void): this;
+    on(event: "disconnect", listener: (this: Client, code: number, reason: any) => void): this;
+    on(event: "reconnecting", listener: (this: Client, attemps: number) => void): this;
+    on(event: "reconnect_failed", listener: (this: Client) => void): this;
+    on(event: "reconnect_error", listener: (this: Client, err: any) => void): this;
+    on(event: "reconnected", listener: (this: Client, attemps: number) => void): this;
+    on(event: "error_response", listener: (this: Client, response: ErrorResponse) => void): this;
+    on(event: "notification_error", listener: (this: Client, error: RPCError) => void): this;
     on(event: "close", cb: (this: Client) => void): this;
-    on(event: "error", listener: (this: Client, error: any) => void);
-    on(event: "buffer_sending_error", listener: (this: Client, error: any) => void);
+    on(event: "error", listener: (this: Client, error: any) => void): this;
+    on(event: "buffer_sending_error", listener: (this: Client, error: any) => void): this;
 }
 
 /**
@@ -115,25 +115,47 @@ export default class Client extends EventEmitter implements Socket {
 
         this.emit("connecting");
         const ws = this._ws = new WebSocket(this.uri, this.config.protocols, this.config);
-        ws.on("error", error => this.emit("error", error));
-
-        ws.on("close", () => this.emit("close"));
-        ws.on("close", (code, reason) => this.emit("disconnect", code, reason));
-        ws.on("close", () => this._ws = null);
+        if (ws.addEventListener) {
+            ws.addEventListener("error", error => this.emit("error", error));
+            ws.addEventListener("close", ({ code, reason }) => {
+                this.emit("close");
+                this.emit("disconnect", code, reason);
+                this._ws = null;
+            });
+            ws.addEventListener("message", ({ data }) => this._messageHandler.handleMessage(this, data).catch(e => this.emit("error", e)));
+        } else {
+            ws.on("error", error => this.emit("error", error));
+            ws.on("close", (code, reason) => {
+                this.emit("close");
+                this.emit("disconnect", code, reason);
+                this._ws = null;
+            });
+            ws.on("message", data => this._messageHandler.handleMessage(this, data).catch(e => this.emit("error", e)));
+        }
 
         if (this.config.reconnection) {
             this._skipReconnection = false;
-            ws.on("close", () => this.reconnect());
+            if (ws.addEventListener) {
+                ws.addEventListener("close", () => this.reconnect());
+            } else {
+                ws.on("close", () => this.reconnect());
+            }
         }
 
-        ws.on("message", data => this._messageHandler.handleMessage(this, data).catch(e => this.emit("error", e)));
-
         await new Promise<void>((resolve, reject) => {
-            ws.once("open", () => {
-                ws.off("error", reject);
-                resolve();
-            });
-            ws.once("error", reject);
+            if (ws.addEventListener) {
+                ws.addEventListener("open", () => {
+                    ws.removeEventListener("error", reject);
+                    resolve();
+                }, { once: true });
+                ws.addEventListener("error", reject, { once: true });
+            } else {
+                ws.once("open", () => {
+                    ws.off("error", reject);
+                    resolve();
+                });
+                ws.once("error", reject);
+            }
         });
 
         await this._sendBufferedMessages();
@@ -167,7 +189,13 @@ export default class Client extends EventEmitter implements Socket {
 
         let promise: Promise<void>;
         if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-            promise = new Promise(resolve => ws.once("close", () => resolve()));
+            promise = new Promise(resolve => {
+                if (ws.addEventListener) {
+                    ws.addEventListener("close", () => resolve(), { once: true });
+                } else {
+                    ws.once("close", () => resolve());
+                }
+            });
             ws.close();
         } else {
             promise = Promise.resolve();
