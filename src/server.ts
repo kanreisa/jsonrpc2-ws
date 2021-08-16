@@ -2,7 +2,7 @@ import * as http from "http";
 import EventEmitter = require("eventemitter3");
 import WebSocket = require("ws");
 import { Server as WebSocketServer, ServerOptions as WSServerOptions, OPEN as WS_OPEN } from "ws";
-import uuidv4 = require("uuid/v4");
+import { v4 as uuidv4 } from "uuid";
 import { Notification, Error as RPCError, Response, ErrorResponse } from "./common";
 import { Socket as ISocket } from "./Socket";
 import MessageHandler, { VERSION_CHECK_MODE, Options as MessageHandlerOptions } from "./MessageHandler";
@@ -159,7 +159,7 @@ export default class Server extends EventEmitter {
             socket.terminate();
         }
 
-        await new Promise((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
             this.wss.close(err => {
                 if (err) {
                     reject(err);

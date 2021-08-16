@@ -129,7 +129,7 @@ export default class Client extends EventEmitter implements Socket {
 
         ws.on("message", data => this._messageHandler.handleMessage(this, data).catch(e => this.emit("error", e)));
 
-        await new Promise((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
             ws.once("open", () => {
                 ws.off("error", reject);
                 resolve();
@@ -312,7 +312,7 @@ export default class Client extends EventEmitter implements Socket {
         const ws = this._ws;
         for (let data = buffer.shift(); data; data = buffer.shift()) {
             try {
-                await new Promise((resolve, reject) => ws.send(data, e => e ? reject(e) : resolve()));
+                await new Promise<void>((resolve, reject) => ws.send(data, e => e ? reject(e) : resolve()));
             } catch (e) {
                 buffer.unshift(data);
                 this.emit("buffer_sending_error", e);
